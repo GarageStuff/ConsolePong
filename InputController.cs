@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,24 +9,35 @@ namespace ConsoleGame
 {
     internal class InputController
     {
+         
         public ClientManager clientManager;
         public GameManager gameManager;
         public Pong pong;
+        public bool menuOpen = false;
         public bool listening = false;
         public bool chatting = false;
         public Player player;
+        public List<string> chats= new List<string>();
         public InputController() 
         {
             listening = false;
         }
+        public void Listen()
+        {
+            listening = true;
+        }
         public async void GetInput()
         {
+            
             while (true)
             {
-                ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
+                if (menuOpen)
                 {
-                    if (listening)
-                    {
+                    continue;
+                }    
+                if (listening)
+                { 
+                    ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
                         if (keyInfo.Key == ConsoleKey.DownArrow)
                         {
                             SendPaddleDown(player);
@@ -41,18 +53,27 @@ namespace ConsoleGame
                         if (keyInfo.Key == ConsoleKey.C)
                         {
                             StartChatting();
-                        }
-                    }
-                    if (chatting)
+                        }                   
+                }
+                if (chatting)
+                {
+                    ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
+                    if (keyInfo.Key == ConsoleKey.Escape)
                     {
-                        if (keyInfo.Key == ConsoleKey.Escape)
-                        {
-                            Console.CursorVisible= false;
-                            listening = true;
-                        }
+                        Console.CursorVisible = false;
+                        chatting = false;
+                        listening = true;
                     }
+                }
+                if (gameManager.scored || gameManager.gameOver)
+                {
+                    continue;
+                }
+                else 
+                {
                     pong.UpdateBoard();
                 }
+                
             }
         }
         public async void MovePaddle(Player player,(int,int) position)
@@ -76,7 +97,6 @@ namespace ConsoleGame
                 }
 
             }
-            //pong.DrawPlayers();
         }
         public async void SendPaddleDown(Player player)
         {
@@ -111,14 +131,20 @@ namespace ConsoleGame
                 }
                 if (gameManager.currentRole == GameManager.Role.Client)
                 {
-                    await clientManager.SendDataAsync(message, null);
+                    if (clientManager.client.Connected)
+                    {
+                        await clientManager.SendDataAsync(message, null);
+
+                    }
                 }
                 if (gameManager.currentRole == GameManager.Role.Server)
                 {
-                    await clientManager.SendDataAsync(message, gameManager.gameServer.playerStreams[0]);
+                    if (clientManager.client.Connected || gameManager.gameServer.playerStreams.Count > 0)
+                    {
+                        await clientManager.SendDataAsync(message, gameManager.gameServer.playerStreams[0]);
+                    }                   
                 }
             }
-            //Thread.Sleep(100);
             pong.DrawPlayers();
         }
         public async void SendPaddleUp(Player player)
@@ -146,11 +172,17 @@ namespace ConsoleGame
                 }
                 if (gameManager.currentRole == GameManager.Role.Client)
                 {
-                        await clientManager.SendDataAsync(message, null);                    
+                    if (clientManager.client.Connected)
+                    {
+                        await clientManager.SendDataAsync(message, null);
+                    }                                     
                 }
                 if (gameManager.currentRole == GameManager.Role.Server)
                 {
-                        await clientManager.SendDataAsync(message, gameManager.gameServer.playerStreams[0]);                  
+                    if (clientManager.client.Connected || gameManager.gameServer.playerStreams.Count > 0)
+                    {
+                        await clientManager.SendDataAsync(message, gameManager.gameServer.playerStreams[0]);
+                    }            
                 }
             }
             pong.DrawPlayers();
@@ -173,20 +205,56 @@ namespace ConsoleGame
             }
             pong.DrawPlayers();
         }
-        public void StartChatting()
+        public async void StartChatting()
         {
-            BEGIN:
             chatting = true;
             listening = false;
-            Console.SetCursorPosition(6, 27);
+            string message = "";
             Console.CursorVisible = true;
-            string chatMessage = Console.ReadLine();
-            goto BEGIN;
+        CAPTURE:
+            Console.SetCursorPosition(ConsoleWriter.chatStart.Item1 + message.Length - 1, ConsoleWriter.chatStart.Item2);
+            ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
+            if(keyInfo.Key == ConsoleKey.Escape) 
+            {
+                StopChatting();
+                return;
+            }
+            if (keyInfo.Key == ConsoleKey.Enter)
+            {                   
+                ConsoleWriter.WriteChat("ME:"+message);                              
+                for (int i = 0; i < message.Length; i++)
+                {
+                    Console.SetCursorPosition(ConsoleWriter.chatStart.Item1 + i, ConsoleWriter.chatStart.Item2);
+                    Console.Write(" ");
+                }
+                if (gameManager.currentRole == GameManager.Role.Server)
+                {
+                    message = "c1:" + message;
+                }
+                else
+                {
+                    message = "c2:" + message;
+                }
+                if (clientManager.client.Connected|| gameManager.gameServer.playerStreams.Count>0)
+                {
+                    await clientManager.SendDataAsync(message, null);
+                }
+                message = "";
+            }
+            else
+            {
+                if (message.Length <50)
+                {
+                    message += keyInfo.KeyChar.ToString();
+                    ConsoleWriter.Write(ConsoleWriter.chatStart.Item1 + message.Length - 1, ConsoleWriter.chatStart.Item2, keyInfo.KeyChar);
+                }
+            }                
+            goto CAPTURE;
         }
-
         public void StopChatting()
         {
-            
+            listening = true;
+            chatting = false;
         }
     }
 }

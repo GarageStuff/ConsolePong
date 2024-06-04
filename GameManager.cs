@@ -37,6 +37,8 @@ namespace ConsoleGame
         public Tuple<int, int> scoreLocation1;
         public Tuple<int, int> scoreLocation2;
         public Pong pong;
+        public bool scored = false;
+        public bool gameOver = false;
         public GameManager(Role role)
         {
             pong = new Pong();
@@ -114,11 +116,14 @@ namespace ConsoleGame
                     clientManager.ConnectAsync("127.0.0.1", 13000);
                 }
                 controller.listening= true;
+                controller.menuOpen = false;
                 controller.GetInput();
+                
             }
             catch(Exception ex) 
             {
-                ConsoleWriter.Write(60, 3, ex.ToString());
+                ConsoleWriter.Write(20, 20, ex.ToString());
+                Console.ReadLine() ;
             }
             finally
             {
@@ -126,7 +131,7 @@ namespace ConsoleGame
                 Console.WriteLine("Client Ended");
                 Reset();
 
-                Console.ReadLine();
+                //Console.ReadLine();
             }
 
         }
@@ -149,17 +154,28 @@ namespace ConsoleGame
         public void Reset()
         {
             Console.Clear();
-            if (gameServer.clientManager.clients.Count > 0)
+            if (clientManager.client.Connected)
             {
-                controller.listening = false;
+                
                 clientManager.Disconnect();
-                Menus.MainMenu();
+                
             }
+            controller.listening = false;
+            Menus.MainMenu();
         }
-
-        public void UpdateScore(Player player, int point)
+        public void Rematch()
         {
+            ConsoleWriter.AniWrite(5, "                   ", new Tuple<int, int>(22, 15));
+            ConsoleWriter.AniWrite(5, "                                        ", new Tuple<int, int>(20, 16));
+            controller.listening = true;
+            controller.chatting = false;
+            pong.PlaceBall();
             
+        }
+        public void UpdateScore()
+        {
+            ConsoleWriter.Write(27, 2, player1Score.ToString());
+            ConsoleWriter.Write(33, 2, player2Score.ToString());
         }
     }
     

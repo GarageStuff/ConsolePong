@@ -9,7 +9,8 @@ namespace ConsoleGame
         public List<int> playerIDs = new();
         static void Main(string[] args)
         {
-            Menus.MainMenu(); 
+            
+            Menus.MainMenu();
         }
         private static void StartTCPClient()
         {

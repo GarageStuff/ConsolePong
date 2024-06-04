@@ -13,7 +13,7 @@ namespace ConsoleGame
 {
     internal class ClientManager
     {
-        private TcpClient client = new();
+        public  TcpClient client = new();
         private NetworkStream stream;
         public List<TcpClient> clients= new List<TcpClient>();
         public GameManager gameManager;
@@ -36,6 +36,8 @@ namespace ConsoleGame
                     }
                     stream = client.GetStream();
                     ConsoleWriter.Write(1,26,"connected to server");
+                    gameManager.clients.Add(client);
+
                     gameManager.StartGame();
                     await Task.Run(() => ReceiveDataAsync()); // Start receiving data
 
@@ -68,13 +70,15 @@ namespace ConsoleGame
                         case '2':
                             ParseNetCoord(gameManager.players[1], response);
                             break;
+                        case 'c':
+                            ReceiveChat(response);
+                            break;
                     }
                     if (response[0].ToString()=='b'.ToString())
                     {
                         var result = ParseStringToIntegers(response);
                         gameManager.pong.ReceiveBallPositon(result.Item1, result.Item2);
                     }
-
                 }
             }
             catch (Exception ex)
@@ -98,12 +102,14 @@ namespace ConsoleGame
                     {
                         
                         await stream.WriteAsync(data, 0, data.Length);
-                        //Console.WriteLine($"Sent: {message}");
                     }
                     if (gameManager?.currentRole == GameManager.Role.Server)
                     {
-                        
-                        await playerStream.WriteAsync(data, 0, data.Length);
+                        if (client.Connected || gameManager.gameServer.playerStreams.Count > 0)
+                        {
+                            playerStream = gameManager.gameServer.playerStreams[0];
+                            await playerStream.WriteAsync(data, 0, data.Length);
+                        }                        
                     }
                 }
                 catch (Exception ex)
@@ -116,7 +122,6 @@ namespace ConsoleGame
         {
             client.Close();
         }
-
         static (int, int) ParseStringToIntegers(string input)
         {
             var match = Regex.Match(input, @"[a-zA-Z]+(\d+),(\d+)");
@@ -141,6 +146,31 @@ namespace ConsoleGame
                 gameManager.controller.ReceivePaddle(player, coord);
             }
             string capturedGroup = match.Groups[1].Value;
+        }
+
+        public async void SendChat(string message)
+        {
+            if (client.Connected || gameManager.gameServer.playerStreams.Count > 0)
+            {
+                
+                await SendDataAsync(message, null);
+            }
+            
+        }
+        public async void ReceiveChat(string response)
+        {
+            int index = response.IndexOf(':');
+            string sender = response.Substring(0, index);
+            string message = response.Substring(index + 1);
+            if (sender == "c1")
+            {
+                message = "Player1:"+ message;
+            }
+            if (sender == "c2")
+            {
+                message = "Player2:"+ message;             
+            }
+            ConsoleWriter.WriteChat(message);
         }
     }
 }

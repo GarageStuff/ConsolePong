@@ -10,8 +10,10 @@ namespace ConsoleGame
     {
         public static int width =60;
         public static int height = 20;
+        static GameManager ?gameManager;
         public static void MainMenu()
         {
+            Console.Clear();
             int consoleSizeX = width + 3;
             int consoleSizeY = height + 6;
             ConsoleWriter.AniWrite(25, "Would you like to play a game? (N)ew game or (J)oin?", new Tuple<int, int>(1, 1));
@@ -46,24 +48,26 @@ namespace ConsoleGame
             //if (host == "")
             //{
                 Console.Clear();
-                GameManager gameManager = new GameManager(GameManager.Role.Client);
-                gameManager.currentRole = GameManager.Role.Client;
+                GameManager gm = new GameManager(GameManager.Role.Client);
+                gm.currentRole = GameManager.Role.Client;
             //}
 
         }
         public static void NewGame()
         {
-            Console.Clear();
             //ConsoleWriter.AniWrite(25, "Ready? Hit enter to start or optional port number", new Tuple<int, int>(1, 1));
             //string response = Console.ReadLine();
             Console.Clear();
             if (true)
             {
-                GameManager gameManager = new GameManager(GameManager.Role.Server);
+                gameManager = new GameManager(GameManager.Role.Server);
+                
+                //gameManager = gm;
             }
             else 
             {
-                GameManager gameManager = new GameManager(GameManager.Role.Server);
+                gameManager = new GameManager(GameManager.Role.Server);
+                //gameManager = gm;
             }
         }
         public static void DrawGameMenu()
@@ -71,10 +75,29 @@ namespace ConsoleGame
             ConsoleWriter.AniWrite(10, "(esc) to quit", new Tuple<int, int>(63, 4));
             ConsoleWriter.AniWrite(10, "(c) to chat", new Tuple<int, int>(63, 6));
         }
-
+        public static void OpenMatchOver(string player)
+        {
+            
+            ConsoleWriter.AniWrite(10, player + "scored!", new Tuple<int, int>(22, 15));
+            ConsoleWriter.AniWrite(10, "Press SPACE to rematch or ESC to quit.", new Tuple<int, int>(10, 16));
+        
+        }
+        static void SendRematch()
+        {
+            gameManager.Rematch();
+        }
+        public static void QuitToMenu()
+        {
+            
+        }
         public static void QuitMenu()
         {
             
+        }
+
+        public static void SetGameGmanager(object sender)
+        {
+            //gameManager = ;
         }
     }
 }

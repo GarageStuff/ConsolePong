@@ -18,7 +18,7 @@ namespace ConsoleGame
         private readonly object _lock = new object();
         private static GameManager ?gameManager;
         private static TcpListener server;
-        private static List<TcpClient> seenClients= new List<TcpClient>();
+        public static List<TcpClient> seenClients= new List<TcpClient>();
         public List<Stream> playerStreams = new List<Stream>();
         public ClientManager clientManager = new ClientManager();
         public Pong pong;
@@ -42,8 +42,12 @@ namespace ConsoleGame
         private void Tick(object state)
         {
             lock (_lock)
-            {              
-                //Console.WriteLine("Tick: " + DateTime.Now);               
+            {
+                //Console.WriteLine("Tick: " + DateTime.Now);
+                if (gameManager.scored || gameManager.gameOver)
+                {
+                    return;
+                }
                 UpdateState();
             }
         }
@@ -54,7 +58,7 @@ namespace ConsoleGame
                 int port = 13000;
                 server = new TcpListener(IPAddress.Any, port);
                 server.Start();
-
+                
                 await Task.Run(() => AcceptClientsAsync());
                 //Console.SetCursorPosition(1, 29);
                //Console.WriteLine("Server started. Waiting for a connection...");
@@ -108,6 +112,9 @@ namespace ConsoleGame
                         case '2':
                             ParseNetCoord(gameManager.players[1], data);
                             break;
+                        case 'c':
+                            clientManager.ReceiveChat(data);
+                            break;
                     }
                 }
             }
@@ -141,7 +148,10 @@ namespace ConsoleGame
             Console.CursorVisible = false;
             if (pong?.ball != null)
             {
-                
+                if (gameManager.scored || gameManager.gameOver)
+                {
+                    return;  
+                }
                 pong.UpdateBall();
                 ballPosition = pong.ball.position.ToString();
                 ballPosition = ballPosition.Trim('(', ')').Replace(" ", "");
@@ -151,7 +161,7 @@ namespace ConsoleGame
                 ballPosition = "b" + ballPosition;
                 if (gameManager.currentRole == GameManager.Role.Server && playerStreams.Count>0)
                 {
-                    if (clientManager.clients.Count > 0)
+                    if (clientManager.client.Connected || gameManager.gameServer.playerStreams.Count > 0)
                     {
                         await clientManager.SendDataAsync(ballPosition, gameManager.gameServer.playerStreams[0]);
                     }

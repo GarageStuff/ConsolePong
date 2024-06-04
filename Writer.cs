@@ -15,13 +15,17 @@ namespace ConsoleGame
         }
         static Queue<messageObject> messageQueue = new Queue<messageObject>();
         static Queue<Tuple<int,int>> blankQueue = new Queue<Tuple<int,int>>();
+        public static Tuple<int, int> chatStart = new Tuple<int,int>(7, 27);
+        public static int chatStartX =2, chatStartY = 22;
+        public static List<string> chats = new List<string>();
+        public static string incompleteChat = "";
         static readonly object lockObject = new object();
         public static bool writing = false;
-        public static void AniWrite(int speed, string text, Tuple<int,int> position)
+        public static async Task AniWrite(int speed, string text, Tuple<int,int> position)
         {
             for (int i = 0; i < text.Length; i++)
             {
-                Thread.Sleep(speed);
+                await Task.Delay(speed);
                 ConsoleWriter.Write(position.Item1+i, position.Item2, text[i]);
             }
         }
@@ -63,8 +67,12 @@ namespace ConsoleGame
                 if (messageQueue.Count > 0)
                 {
                     messageObject messageObject = messageQueue.Dequeue();
-                    Console.SetCursorPosition(messageObject.position.Item1, messageObject.position.Item2);
-                    Console.Write(messageObject.message);
+                    if (messageObject != null)
+                    {
+                        Console.SetCursorPosition(messageObject.position.Item1, messageObject.position.Item2);
+                        Console.Write(messageObject.message);
+                    }
+                    
                 }
             }
         }
@@ -73,10 +81,29 @@ namespace ConsoleGame
             Console.SetCursorPosition(x, y);
             Console.Write(' ');
         }
-
-        public static void Blank(int x, int y)
+        public static async Task Blank(int x, int y)
         {
             blankQueue.Enqueue(new Tuple<int, int>(x, y));
+        }  
+        public static async Task WriteChat(string message)
+        {
+            chats.Add(message);
+            if (chats.Count == 5)
+            {
+                chats.Remove(chats[0]); 
+            }           
+            for (int i=0; i<chats.Count; i++)
+            {
+                int length = chats[i].Length;
+                int start = chatStartX + length-1;
+                int dif = 60 - start;
+                for (int j = start; j < dif+length+1; j++)
+                {
+                    Write(start + j - chats[i].Length, chatStart.Item2 - 5 + i," ");
+                }
+                Write(chatStart.Item1-4, chatStart.Item2 - 5 + i, chats[i]);
+
+            }
         }
     }
 }
