@@ -76,11 +76,20 @@ namespace ConsoleGame
             randVelY = random.Next(-1, 2);
             if (ball != null)
             {
-                ball.velocity = new Tuple<int, int>(randVelX, randVelY);               
+                              
             }
             else 
             {
-                ball = new Ball(startX, startY, randVelX, randVelY);
+                if (ball==null)
+                {
+                    ball = new Ball(startX, startY, randVelX, randVelY);
+                    ball.velocity = new Tuple<int, int>(randVelX, randVelY);
+                }
+                else
+                {
+                    ball.position = new Tuple<int, int>(startX, startY);
+                    ball.velocity = new Tuple<int, int>(randVelX, randVelY);
+                }
             }
             ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, ballChar);
             ball.prevPosition = ball.position;
@@ -206,14 +215,16 @@ namespace ConsoleGame
                     return;
                 }
                 Score(1);
+                return;
             }
             if (newX < 1)
             {
-                if (gameManager.scored)
+                 if (gameManager.scored)
                 {
                     return;
                 }
                 Score(2);
+                return;
             }
             Tuple<int, int> coord = new Tuple<int, int>(newX, newY);
             foreach (var player in gameManager.players)
@@ -335,14 +346,19 @@ namespace ConsoleGame
         }
         public void Score(int playerID)
         {
-            
+            if (gameManager.scored)
+            {
+                return;
+            }
+            ball.velocity = new Tuple<int, int>(0, 0);
+            //PlaceBall;
             string player = "";
             if (gameManager.gameOver || gameManager.scored)
             {
                 return;
             }
             gameManager.scored = true;
-            ball.velocity = new Tuple<int, int>(0, 0);
+            
             if (playerID == 1)
             {
                 player = "Player 1 ";
@@ -358,31 +374,19 @@ namespace ConsoleGame
 
             Menus.OpenMatchOver(player);
             
-            LOOP:
-            
-                ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
-                if (keyInfo.Key == ConsoleKey.Spacebar)
-                {
-                    Rematch();
-                goto EXIT;
-                }
-            goto LOOP;
-        EXIT:;
-                //return;
-                
-                
+
+
         }
         
         public void Rematch()
-        {
+         {
             ConsoleWriter.AniWrite(5, "                   ", new Tuple<int, int>(22, 15));
             ConsoleWriter.AniWrite(5, "                                        ", new Tuple<int, int>(20, 16));
             gameManager.scored = false;
             gameManager.gameOver = false;
             gameManager.controller.Listen();
             gameManager.controller.chatting = false;
-            gameManager.controller.menuOpen = false;
-            
+                gameManager.controller.menuOpen = false;            
             PlaceBall();
             
         }

@@ -27,14 +27,31 @@ namespace ConsoleGame
             listening = true;
         }
         public async void GetInput()
-        {
-            
+        {           
             while (true)
             {
+                if (gameManager.scored)
+                {
+                    while (true)
+                    {
+                        ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
+                        if (keyInfo.Key == ConsoleKey.Spacebar)
+                        {
+                            gameManager.scored = false;
+                            pong.Rematch();
+                            break;
+                        }
+
+                    }
+                }
                 if (menuOpen)
                 {
                     continue;
-                }    
+                }
+                if (gameManager.scored || gameManager.gameOver)
+                {
+                    continue;
+                }
                 if (listening)
                 { 
                     ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
@@ -53,7 +70,8 @@ namespace ConsoleGame
                         if (keyInfo.Key == ConsoleKey.C)
                         {
                             StartChatting();
-                        }                   
+                        }
+                    pong.UpdateBoard();
                 }
                 if (chatting)
                 {
@@ -65,11 +83,9 @@ namespace ConsoleGame
                         listening = true;
                     }
                 }
-                if (gameManager.scored || gameManager.gameOver)
-                {
-                    continue;
-                }
-                else 
+                
+
+                else
                 {
                     pong.UpdateBoard();
                 }
