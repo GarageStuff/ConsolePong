@@ -48,7 +48,11 @@ namespace ConsoleGame
                 {
                     return;
                 }
-                UpdateState();
+                else 
+                {
+                    UpdateState();
+                }
+                
             }
         }
         private async void StartTcpListener()
@@ -129,7 +133,6 @@ namespace ConsoleGame
                 Console.SetCursorPosition(1, 33);
                 Console.WriteLine("Client disconnected.");
                 Console.Clear();
-
             }
         }
         static (char, (int, int)) ParseStringToTuple(string input)
@@ -140,10 +143,11 @@ namespace ConsoleGame
             int first = int.Parse(parts[0]);
             int second = int.Parse(parts[1]);
             return (initialChar, (first, second));
-        }
-       
+        }      
         public async void UpdateState() 
         {
+            if (pong != null && pong.placing)
+            { return; }
             string ballPosition="";
             Console.CursorVisible = false;
             if (pong?.ball != null)
@@ -164,8 +168,7 @@ namespace ConsoleGame
                     if (clientManager.client.Connected || gameManager.gameServer.playerStreams.Count > 0)
                     {
                         await clientManager.SendDataAsync(ballPosition, gameManager.gameServer.playerStreams[0]);
-                    }
-                    
+                    }                    
                 }
                 pong.DrawBall();
             }           
@@ -175,7 +178,6 @@ namespace ConsoleGame
                 await clientManager.SendDataAsync("b" + ballPosition, client);
             }
         }
-
         public void ParseNetCoord(Player player, string message)
         {
             string pattern = @"\((\d+),\s*(\d+)\)";

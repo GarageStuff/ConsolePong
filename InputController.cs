@@ -41,7 +41,6 @@ namespace ConsoleGame
                             pong.Rematch();
                             break;
                         }
-
                     }
                 }
                 if (menuOpen)
@@ -71,6 +70,13 @@ namespace ConsoleGame
                         {
                             StartChatting();
                         }
+                        if (keyInfo.Key == ConsoleKey.Spacebar)
+                        {
+                            if (gameManager.scored || gameManager.gameOver)
+                            {
+                                pong.Rematch();                    
+                            }
+                        }
                     pong.UpdateBoard();
                 }
                 if (chatting)
@@ -83,13 +89,7 @@ namespace ConsoleGame
                         listening = true;
                     }
                 }
-                
-
-                else
-                {
-                    pong.UpdateBoard();
-                }
-                
+                pong.UpdateBoard();               
             }
         }
         public async void MovePaddle(Player player,(int,int) position)
@@ -123,13 +123,11 @@ namespace ConsoleGame
             else
             {
                 player.paddle.prevPosition = player.position;
-                player.position = new Tuple<int, int>(player.position.Item1, player.position.Item2 + 1);
-                
+                player.position = new Tuple<int, int>(player.position.Item1, player.position.Item2 + 1);                
                 for (int i = -1; i < 2; i++)
                 {
                     Console.SetCursorPosition(player.paddle.prevPosition.Item1, player.paddle.prevPosition.Item2 + i);
                     Console.Write(" ");
-
                 }
                 string message = "";
                 
@@ -150,7 +148,6 @@ namespace ConsoleGame
                     if (clientManager.client.Connected)
                     {
                         await clientManager.SendDataAsync(message, null);
-
                     }
                 }
                 if (gameManager.currentRole == GameManager.Role.Server)
