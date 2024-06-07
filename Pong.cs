@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace ConsoleGame
 {
@@ -38,6 +39,7 @@ namespace ConsoleGame
         Paddle p1Paddle = new Paddle();        
         public Player player2 = new Player();
         Paddle p2Paddle = new Paddle();
+        public bool waitingOnPlayerConnect = true;
         int[,] layout;
         public char paddleChar = '|';
         public char ballChar = 'O';
@@ -57,6 +59,9 @@ namespace ConsoleGame
             AnimateBoard();
             PlacePlayers();
             PlaceBall();
+            waitingOnPlayerConnect = true;
+            Menus.StartWaiting();
+            PlacementCountDown(5);
         }
         public void PlaceBall()
         {
@@ -89,8 +94,14 @@ namespace ConsoleGame
             ball.prevPosition = ball.position;
         }
 
-        public  void PlacementCountDown(int timer)
+        public void PlacementCountDown(int timer)
         {
+
+            while (waitingOnPlayerConnect)
+            {
+                
+                
+            }
             if (ball != null)
             {
                 ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, " ");
@@ -114,6 +125,7 @@ namespace ConsoleGame
                     break;
                 }
             }
+
         }
 
         public void PlacePlayers()
@@ -212,7 +224,7 @@ namespace ConsoleGame
             ConsoleWriter.Write(27,2,gameManager.player1Score.ToString());
             ConsoleWriter.Write(33,2,gameManager.player2Score.ToString());
             Menus.DrawGameMenu();
-            PlacementCountDown(5);
+            
         }
         void DrawNames()
         {

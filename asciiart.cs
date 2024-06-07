@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace ConsoleGame
 {
-    internal class asciiart
+    public static class asciiart
     {
-        string title = @"
+        public static string readyAscii = "RRRRR  EEEEE  AAAAA  DDDDD   Y   Y  ????? \r\nR   R  E      A   A  D    D   Y Y   ?   ? \r\nRRRRR  EEEE   AAAAA  D     D  YYY   ????? \r\nR  R   E      A   A  D    D    Y    ?   ? \r\nR   R  EEEEE  A   A  DDDDD     Y  ";
+        static string title = @"
          ____    ___   _   _   ____ 
         |  _ \  / _ \ | \ | | / ___|
         | |_) || | | ||  \| || |  _ 

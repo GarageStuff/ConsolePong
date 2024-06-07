@@ -35,7 +35,7 @@ namespace ConsoleGame
 
                     }
                     stream = client.GetStream();
-                    ConsoleWriter.Write(1,26,"connected to server");
+                    //ConsoleWriter.Write(1,26,"connected to server");
                     gameManager.clients.Add(client);
 
                     gameManager.StartGame();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -95,9 +96,10 @@ namespace ConsoleGame
             
         }
 
-        public static void SetGameGmanager(object sender)
+        public static void StartWaiting()
         {
-            //gameManager = ;
+            ConsoleWriter.AniWrite(10, "Waiting For Second Player...", new Tuple<int, int>(18, 13));
+            
         }
     }
 }

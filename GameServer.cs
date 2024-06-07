@@ -64,8 +64,6 @@ namespace ConsoleGame
                 server.Start();
                 
                 await Task.Run(() => AcceptClientsAsync());
-                //Console.SetCursorPosition(1, 29);
-               //Console.WriteLine("Server started. Waiting for a connection...");
             }
             catch (SocketException e)
             {
@@ -75,8 +73,6 @@ namespace ConsoleGame
             {
                 server?.Stop();
             }
-            //Console.WriteLine("\nHit enter to continue...");
-            //Console.Read();
         }
 
         private async Task AcceptClientsAsync()
@@ -86,8 +82,6 @@ namespace ConsoleGame
                 TcpClient client = await server.AcceptTcpClientAsync();
                 seenClients.Add(client);
                 playerStreams.Add(client.GetStream());
-                //Console.SetCursorPosition(1, 23);
-                //Console.WriteLine("Client connected!");
                 await Task.Run(() => HandleClient(client));
             }
         }
@@ -95,7 +89,7 @@ namespace ConsoleGame
         {
             byte[] buffer = new byte[256];
             NetworkStream stream = client.GetStream();
-
+            pong.waitingOnPlayerConnect = false;
             try
             {
                 while (client.Connected)
@@ -130,7 +124,7 @@ namespace ConsoleGame
             {
                 client.Close();
                 seenClients.Remove(client);
-                Console.SetCursorPosition(1, 33);
+                Console.SetCursorPosition(3,20);
                 Console.WriteLine("Client disconnected.");
                 Console.Clear();
             }
@@ -174,7 +168,6 @@ namespace ConsoleGame
             }           
             foreach (Stream client in playerStreams)
             {
-                clientManager.SendDataAsync("Tick", client);
                 await clientManager.SendDataAsync("b" + ballPosition, client);
             }
         }
