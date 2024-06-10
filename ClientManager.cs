@@ -11,21 +11,16 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ConsoleGame
 {
-    internal class ClientManager
+    public static class ClientManager
     {
-        public  TcpClient client = new();
-        private NetworkStream stream;
-        public List<TcpClient> clients= new List<TcpClient>();
-        public GameManager gameManager;
-        public GameServer gameServer;
-        //public InputController controller;
-        public ClientManager()
+        public static TcpClient client = new();
+        public static NetworkStream stream;
+        public static List<TcpClient> clients = new List<TcpClient>();       
+
+        public static async Task ConnectAsync(string server, int port)
         {
-            //client = new TcpClient();
-        }
-        public async Task ConnectAsync(string server, int port)
-        {
-            if (gameManager.currentRole == GameManager.Role.Client)
+            GameManager.waitingForPlayerConnect = true;
+            if (GameManager.currentRole == GameManager.Role.Client)
             {
                 try
                 {
@@ -36,54 +31,83 @@ namespace ConsoleGame
                     }
                     stream = client.GetStream();
                     //ConsoleWriter.Write(1,26,"connected to server");
-                    gameManager.clients.Add(client);
+                    GameManager.clients.Add(client);
+                    clients.Add(client);
+                    GameManager.waitingForPlayerConnect = false;
 
-                    gameManager.StartGame();
-                    await Task.Run(() => ReceiveDataAsync()); // Start receiving data
+                    //GameManager.StartGame();
+                    await Task.Run(() => ReceiveDataAsync());
+                    //GameManager.StartGame();
+                    //nInputController.GetInput();
+                    // Start receiving data
 
                 }
                 catch (Exception ex)
                 {
-                    Console.SetCursorPosition(2,23);
+                    Console.SetCursorPosition(2, 23);
                     Console.Write(ex);
+                }
+                finally 
+                {
+                    Console.SetCursorPosition(2, 23);
+                    Console.Write("clientmanager connect async closed");
                 }
             }
             
         }
-        private async Task ReceiveDataAsync()        
+        private static async Task ReceiveDataAsync()        
         {
 
             byte[] buffer = new byte[256];
+            Pong.waitingOnPlayerConnect = false;
             try
             {
-                while (client.Connected)
+                while (true)
                 {
+                    
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     if (bytesRead == 0) break; // Server disconnected
 
-                    string response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                    switch (response[0])
+                    string data = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                    switch (data[0])
                     {
                         case '1':
-                            ParseNetCoord(gameManager.players[0], response);
+                            ParseNetCoord(GameManager.players[0], data);
                             break;
                         case '2':
-                            ParseNetCoord(gameManager.players[1], response);
+                            ParseNetCoord(GameManager.players[1], data);
                             break;
                         case 'c':
-                            ReceiveChat(response);
+                            ReceiveChat(data);
+                            break;
+                        case 's':
+                            ReceiveState(data);
+                            break;
+                        case 'n':
+                            ReceiveNetworkCommand(data);
+                            break;
+                        case 'b':
+                            if (data.Length > 4 && data.Length < 8)
+                            {
+                                var result = ParseStringToIntegers(data);
+                                Pong.ReceiveBallPositon(result.Item1, result.Item2);
+                                break;
+                            }
+                            else 
+                            {
+                                break;
+                            }                            
+                        default:
+                            ConsoleWriter.Write(5, 10,"Bad Data: " + data.ToString());
                             break;
                     }
-                    if (response[0].ToString()=='b'.ToString())
-                    {
-                        var result = ParseStringToIntegers(response);
-                        gameManager.pong.ReceiveBallPositon(result.Item1, result.Item2);
-                    }
                 }
+                Console.SetCursorPosition(5, 10);
+                Console.WriteLine("Receive data async ended");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception: {ex.Message}");
+                Console.WriteLine($"Exception: {ex.Message}" + " caller: " + ex.Source.ToString());
             }
             finally
             {
@@ -91,25 +115,55 @@ namespace ConsoleGame
                 Console.WriteLine("Disconnected from the server.");
             }
         }
-        public async Task SendDataAsync(string message, Stream playerStream)
+
+        public  static void ReceiveState(string data)
+        {
+            switch (data)
+            {
+                case "sready":
+                    GameManager.readyPlayers += 1;
+                    if (GameManager.readyPlayers == 2)
+                    {
+                        SendDataAsync("sready", stream);
+                        GameManager.playersReady = true;
+                    }
+                    break;
+                case "sscored1":
+                    GameManager.scored = true;
+                    Pong.Score(1);
+                    break;
+                case "sscored2":
+                    GameManager.scored = true;
+                    Pong.Score(2);
+                    break;
+                case "srematch":
+                    //GameManager.scored = false;
+                    GameManager.Rematch();
+                    break;
+                default: break;
+            }
+         
+        }
+
+        public static async Task SendDataAsync(string message, Stream playerStream)
         {
             if (message != null)
             {
                 try
                 {
                     byte[] data = Encoding.ASCII.GetBytes(message);
-                    if (client.Connected)
+                    if (playerStream!=null)
                     {
-                        
-                        await stream.WriteAsync(data, 0, data.Length);
+                        await playerStream.WriteAsync(data, 0, data.Length);
+                        //await stream.WriteAsync(data, 0, data.Length);
                     }
-                    if (gameManager?.currentRole == GameManager.Role.Server)
+                    if (GameManager.currentRole == GameManager.Role.Server)
                     {
-                        if (client.Connected || gameManager.gameServer.playerStreams.Count > 0)
-                        {
-                            playerStream = gameManager.gameServer.playerStreams[0];
-                            await playerStream.WriteAsync(data, 0, data.Length);
-                        }                        
+                        //if (client.Connected || GameServer.playerStreams.Count > 0)
+                        //{
+                            //playerStream = GameServer.playerStreams[0];
+                            //await playerStream.WriteAsync(data, 0, data.Length);
+                        //}                        
                     }
                 }
                 catch (Exception ex)
@@ -118,7 +172,7 @@ namespace ConsoleGame
                 }
             }                     
         }
-        public void Disconnect()
+        public static void Disconnect()
         {
             client.Close();
         }
@@ -134,7 +188,7 @@ namespace ConsoleGame
             return (x, y);
         }
 
-        public void ParseNetCoord(Player player, string message)
+        public static void ParseNetCoord(Player player, string message)
         {
             string pattern = @"\((\d+),\s*(\d+)\)";
             Match match = Regex.Match(message, pattern);
@@ -143,21 +197,21 @@ namespace ConsoleGame
                 int number1 = int.Parse(match.Groups[1].Value);
                 int number2 = int.Parse(match.Groups[2].Value);
                 Tuple<int, int> coord = new Tuple<int, int>(number1, number2);
-                gameManager.controller.ReceivePaddle(player, coord);
+                InputController.ReceivePaddle(player, coord);
             }
             string capturedGroup = match.Groups[1].Value;
         }
 
-        public async void SendChat(string message)
+        public static async void SendChat(string message)
         {
-            if (client.Connected || gameManager.gameServer.playerStreams.Count > 0)
+            if (client.Connected || GameServer.playerStreams.Count > 0)
             {
                 
                 await SendDataAsync(message, null);
             }
             
         }
-        public async void ReceiveChat(string response)
+        public static async void ReceiveChat(string response)
         {
             int index = response.IndexOf(':');
             string sender = response.Substring(0, index);
@@ -172,5 +226,18 @@ namespace ConsoleGame
             }
             ConsoleWriter.WriteChat(message);
         }
+
+        public static void ReceiveNetworkCommand(string message)
+        {
+            switch (message)
+            {
+                case "nConfirmConnect":
+                    GameManager.waitingForPlayerConnect = false;
+                    break;
+
+            }
+        }
+
     }
+
 }

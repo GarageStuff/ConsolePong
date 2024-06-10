@@ -1,68 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Net;
 using System.Text;
-using System.Threading;
-using static ConsoleGame.GameManager;
 using System.Text.RegularExpressions;
 
 namespace ConsoleGame
 {
-    internal class GameServer
+    public static class GameServer
     {
-        private Role currentRole;
-        private Timer _timer;
-        private readonly int _tickRate; // Tick rate in milliseconds
-        private readonly object _lock = new object();
-        private static GameManager ?gameManager;
+        private static Timer _timer;
+        private static readonly int _tickRate =  2000; // Tick rate in milliseconds
+        private static readonly object _lock = new object();
         private static TcpListener server;
         public static List<TcpClient> seenClients= new List<TcpClient>();
-        public List<Stream> playerStreams = new List<Stream>();
-        public ClientManager clientManager = new ClientManager();
-        public Pong pong;
-        public GameServer(int tickRate, GameManager _gm)
+        public static List<Stream> playerStreams = new List<Stream>();
+        static GameServer()
         {
-            currentRole = Role.Server;
-            _tickRate = tickRate;
-            _timer = new Timer(Tick, null, Timeout.Infinite, Timeout.Infinite);
-            gameManager = _gm;
-            clientManager.gameManager= gameManager;
+
         }
-        public void Start()
+        public static void Start(int _tickRate)
         {
+            
+            _timer = new Timer(Tick, null, Timeout.Infinite, Timeout.Infinite);
             _timer.Change(0, _tickRate);
             StartTcpListener();
         }
-        public void Stop()
+        public static void Stop()
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite); // Stop the timer
         }
-        private void Tick(object state)
+        private static void Tick(object state)
         {
             lock (_lock)
             {
-                //Console.WriteLine("Tick: " + DateTime.Now);
-                if (gameManager.scored || gameManager.gameOver)
+                if (GameManager.scored || GameManager.gameOver)
                 {
                     return;
                 }
                 else 
                 {
-                    UpdateState();
+                    if (GameManager.playersReady)
+                    {
+                        UpdateState();
+                    }                   
                 }
-                
             }
         }
-        private async void StartTcpListener()
+        private static async void StartTcpListener()
         {       
             try
             {
                 int port = 13000;
                 server = new TcpListener(IPAddress.Any, port);
-                server.Start();
-                
+                server.Start();                
                 await Task.Run(() => AcceptClientsAsync());
             }
             catch (SocketException e)
@@ -71,25 +60,31 @@ namespace ConsoleGame
             }
             finally
             {
+                Console.WriteLine("TCP listener stopped");
                 server?.Stop();
             }
         }
 
-        private async Task AcceptClientsAsync()
+        private static async Task AcceptClientsAsync()
         {
+            GameManager.waitingForPlayerConnect = true;
             while (true)
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
                 seenClients.Add(client);
+                
+                ClientManager.clients.Add(client);
                 playerStreams.Add(client.GetStream());
                 await Task.Run(() => HandleClient(client));
             }
         }
-        private async void HandleClient(TcpClient client)
+        private static async void HandleClient(TcpClient client)
         {
             byte[] buffer = new byte[256];
             NetworkStream stream = client.GetStream();
-            pong.waitingOnPlayerConnect = false;
+            ConfirmConnect(stream);
+            ClientManager.stream= stream;
+            Pong.waitingOnPlayerConnect = false;
             try
             {
                 while (client.Connected)
@@ -97,21 +92,26 @@ namespace ConsoleGame
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     if (bytesRead == 0)
                     {
-                        //Console.SetCursorPosition(1, 38);
+                        //Disconnect
                         break;
                     }
-
                     string data = Encoding.ASCII.GetString(buffer, 0, bytesRead);
                     switch (data[0])
                     {
                         case '1':
-                            ParseNetCoord(gameManager.players[0], data);
+                            ParseNetCoord(GameManager.players[0], data);
                             break;
                         case '2':
-                            ParseNetCoord(gameManager.players[1], data);
+                            ParseNetCoord(GameManager.players[1], data);
                             break;
                         case 'c':
-                            clientManager.ReceiveChat(data);
+                            ClientManager.ReceiveChat(data);
+                            break;
+                        case 's':
+                            ClientManager.ReceiveState(data);
+                            break;
+                        case 'n':
+                            ClientManager.ReceiveNetworkCommand(data);
                             break;
                     }
                 }
@@ -122,11 +122,17 @@ namespace ConsoleGame
             }
             finally
             {
-                client.Close();
-                seenClients.Remove(client);
-                Console.SetCursorPosition(3,20);
-                Console.WriteLine("Client disconnected.");
-                Console.Clear();
+                if (client != null)
+                {
+                    client.Close();
+                    seenClients.Remove(client);
+                }              
+                Console.SetCursorPosition(12,20);
+                Console.WriteLine("Lost Connection");
+                Console.SetCursorPosition(8,21);
+                Console.WriteLine("Press Any Key To Return To Menu...");
+                Console.ReadLine();
+                GameManager.QuitToMenu();
             }
         }
         static (char, (int, int)) ParseStringToTuple(string input)
@@ -138,40 +144,40 @@ namespace ConsoleGame
             int second = int.Parse(parts[1]);
             return (initialChar, (first, second));
         }      
-        public async void UpdateState() 
+        public static async void UpdateState() 
         {
-            if (pong != null && pong.placing)
+            if (!GameManager.playersReady)
             { return; }
             string ballPosition="";
             Console.CursorVisible = false;
-            if (pong?.ball != null)
+            if (Pong.ball != null)
             {
-                if (gameManager.scored || gameManager.gameOver)
+                if (GameManager.scored || GameManager.gameOver)
                 {
                     return;  
                 }
-                pong.UpdateBall();
-                ballPosition = pong.ball.position.ToString();
+                Pong.UpdateBall();
+                ballPosition = Pong.ball.position.ToString();
                 ballPosition = ballPosition.Trim('(', ')').Replace(" ", "");
                 string[] parts = ballPosition.Split(',');
                 int x = int.Parse(parts[0]);
                 int y = int.Parse(parts[1]);
                 ballPosition = "b" + ballPosition;
-                if (gameManager.currentRole == GameManager.Role.Server && playerStreams.Count>0)
+                if (GameManager.currentRole == GameManager.Role.Server && playerStreams.Count>0)
                 {
-                    if (clientManager.client.Connected || gameManager.gameServer.playerStreams.Count > 0)
+                    if (ClientManager.client.Connected || GameServer.playerStreams.Count > 0)
                     {
-                        await clientManager.SendDataAsync(ballPosition, gameManager.gameServer.playerStreams[0]);
+                        await ClientManager.SendDataAsync(ballPosition, GameServer.playerStreams[0]);
                     }                    
                 }
-                pong.DrawBall();
+                Pong.DrawBall();
             }           
             foreach (Stream client in playerStreams)
             {
-                await clientManager.SendDataAsync("b" + ballPosition, client);
+                await ClientManager.SendDataAsync("b" + ballPosition, client);
             }
         }
-        public void ParseNetCoord(Player player, string message)
+        public static void ParseNetCoord(Player player, string message)
         {
             string pattern = @"\((\d+),\s*(\d+)\)";
             Match match = Regex.Match(message, pattern);
@@ -180,9 +186,25 @@ namespace ConsoleGame
                 int number1 = int.Parse(match.Groups[1].Value);
                 int number2 = int.Parse(match.Groups[2].Value);
                 Tuple<int, int> coord = new Tuple<int, int>(number1, number2);
-                gameManager.controller.ReceivePaddle(player, coord);
+                InputController.ReceivePaddle(player, coord);
             }
             string capturedGroup = match.Groups[1].Value;
+        }
+
+        public static async void ConfirmConnect(Stream clientStream)
+        {
+            await ClientManager.SendDataAsync("nConfirmConnect", clientStream);
+        }
+
+        static void ReceiveNetworkCommand(string message)
+        {
+            switch (message)
+            {
+                case "nConfirmConnect":
+                    GameManager.waitingForPlayerConnect = false;
+                    break;
+
+            }
         }
     }
 

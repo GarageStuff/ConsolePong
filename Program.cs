@@ -5,15 +5,16 @@ using System.Threading.Tasks;
 namespace ConsoleGame
 {
     class GameListener
-    {        
-        public List<int> playerIDs = new();
+    {       
+        
         static void Main(string[] args)
         {
-            
+            Console.OutputEncoding = Encoding.UTF8;
             Menus.MainMenu();
         }
         private static void StartTCPClient()
         {
+            
             int port = 13000;
             TcpClient client = new();
             client.Connect("127.0.0.1", 13000);

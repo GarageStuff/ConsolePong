@@ -19,57 +19,55 @@ namespace ConsoleGame
         public Paddle paddle;
         public List<string> chats = new List<string>();
     }
-    internal class GameManager
+    public static class GameManager
+
     {
         public enum Role { Client, Server, Host }
-        public Role currentRole = Role.Client;
-        public int tickRate = 1;
-        private float _tick = 1;
-        public GameManager gm;
-        public List<TcpClient> clients = new();
-        public ClientManager clientManager = new ClientManager();
-        public InputController controller = new();
-        public GameServer gameServer;
-        public int consoleWidth, consoleHeight;        
-        public List<Player> players = new();
-        public int player1Score, player2Score;
-        public Tuple<int, int> scores;
-        public Tuple<int, int> scoreLocation1;
-        public Tuple<int, int> scoreLocation2;
-        public Pong pong;
-        public bool scored = false;
-        public bool gameOver = false;
-        public GameManager(Role role)
+        public static Role currentRole = Role.Client;
+        public static int tickRate = 1;
+        private static float _tick = 1;
+        public static List<TcpClient> clients = new();
+        public static List<int> playerIDs = new();
+        public static int consoleWidth, consoleHeight;       
+        public static List<Player> players = new();
+        public static bool waitingForPlayerConnect = true;
+        public static int readyPlayers = 0;
+        public static bool playersReady = false;
+        public static int player1Score, player2Score;
+        public static Tuple<int, int> scores;
+        public static Tuple<int, int> scoreLocation1;
+        public static Tuple<int, int> scoreLocation2;
+        public static bool scored = false;
+        public static bool gameOver = false;
+        
+        static GameManager() 
         {
-            pong = new Pong();
-            clientManager.gameManager = this;
-            clientManager.gameServer = gameServer;
-            controller.gameManager= this;           
-            controller.clientManager = clientManager;
-            pong.gameManager = this;
-            controller.pong = pong;
-            currentRole= role;
-            switch (role) 
+
+        }
+        
+        public static void SetRole(Role role)
+        {
+            currentRole = role;
+            switch (role)
             {
                 case Role.Client:
                     try
-                    {
+                    {                     
                         StartClient();
-                        controller.listening= true;
                         break;
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        Console.WriteLine(ex);
+                        Console.WriteLine(ex.ToString());
                         break;
                     }
-                    finally 
+                    finally
                     {
                         Console.WriteLine("Application finished. Press Enter to exit...");
                         Console.ReadLine();
                     }
-                    
-               case Role.Server:
+
+                case Role.Server:
                     try
                     {
                         StartGameServer();
@@ -78,7 +76,7 @@ namespace ConsoleGame
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex);
+                        Console.WriteLine(ex.ToString());
                         break;
                     }
                     finally
@@ -87,38 +85,25 @@ namespace ConsoleGame
                         Console.ReadLine();
                     }
             }
-        }      
-        void MainMenu()
-        {
-            Console.SetCursorPosition(1, 1);
         }
-        public void StartGameServer()
+        public static void StartGameServer()
         {
             Task.Run(() =>
-            {
-                GameServer server = new GameServer(100, this); // Tick every 1000 ms (1 second)
-                server.Start();
-                gameServer = server;
-                gameServer.pong= pong;
-                //Console.SetCursorPosition(1, 30);
-                //Console.WriteLine("Starting server...");
-                StartGame();
+            {                
+                GameServer.Start(100);
             });
 
         }
-
-        public async Task StartClient()
-        {           
+        public static async Task StartClient()
+        {   
+            waitingForPlayerConnect= true;           
             try
             {
                 if (currentRole == Role.Client)
                 {
-                    clientManager.ConnectAsync("127.0.0.1", 13000);
-                }
-                controller.listening= true;
-                controller.menuOpen = false;
-                controller.GetInput();
-                
+                    ClientManager.ConnectAsync("127.0.0.1", 13000);
+                }               
+                StartGame();               
             }
             catch(Exception ex) 
             {
@@ -127,52 +112,78 @@ namespace ConsoleGame
             }
             finally
             {
-                clientManager.Disconnect();
+                ClientManager.Disconnect();
                 Console.WriteLine("Client Ended");
-                Reset();
-
+                //Reset();
                 //Console.ReadLine();
             }
 
         }
-        public void AddClient(TcpClient client)
+        public static void AddClient(TcpClient client)
         {
             clients.Add(client);
         }
-        public void RemoveClient(TcpClient client)
+        public static void RemoveClient(TcpClient client)
         {
             clients.Remove(client);
         }
 
-        /////GAMEPLAY STUFF
-        public void StartGame()
+        public static void PlayerReady()
         {
-            //ConsoleWriter.AniWrite(100, "this long sentence", new Tuple<int,int>(5,5));
-            pong.BuildBoard(60, 20);
-        }
-
-        public void Reset()
-        {
-            Console.Clear();
-            if (clientManager.client.Connected)
-            {
-                
-                clientManager.Disconnect();
-                
-            }
-            controller.listening = false;
-            Menus.MainMenu();
-        }
-        public void Rematch()
-        {
-            ConsoleWriter.AniWrite(5, "                   ", new Tuple<int, int>(22, 15));
-            ConsoleWriter.AniWrite(5, "                                        ", new Tuple<int, int>(20, 16));
-            controller.listening = true;
-            controller.chatting = false;
-            pong.PlaceBall();
             
         }
-        public void UpdateScore()
+        /////GAMEPLAY STUFF
+        public static void StartGame()
+        {    
+            Pong.BuildBoard(60, 20);
+            Menus.StartWaiting();
+            Pong.PlacementCountDown(5);
+            InputController.listening= true;
+            InputController.GetInput();
+        }
+        public static void QuitToMenu()
+        {
+            if (ClientManager.stream != null)
+            {
+                ClientManager.stream.Close();
+                if (ClientManager.client != null)
+                {
+                    ClientManager.client.Close();
+                }
+            }
+            InputController.listening= false;
+            playersReady = false;
+            readyPlayers = 0;
+            Menus.MainMenu();
+        }
+        public static void Reset()
+        {
+            Console.Clear();
+            if (ClientManager.client.Connected)
+            {
+                
+                ClientManager.Disconnect();
+                
+            }
+            InputController.listening = false;
+            Menus.MainMenu();
+        }
+        public static void Rematch()
+        {
+            playersReady = false;
+            readyPlayers = 0;
+            scored = false;
+            gameOver = false;
+            InputController.chatting = false;
+            InputController.menuOpen = false;
+            Pong.PlacementCountDown(5);
+            InputController.listening= true;
+            Pong.PlaceBall();
+            InputController.GetInput();            
+            
+            //Pong.Rematch();
+        }
+        public static void UpdateScore()
         {
             ConsoleWriter.Write(27, 2, player1Score.ToString());
             ConsoleWriter.Write(33, 2, player2Score.ToString());

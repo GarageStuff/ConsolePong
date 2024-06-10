@@ -7,10 +7,11 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Media;
 
 namespace ConsoleGame
 {
-    class Ball
+    public class Ball
     {
         public Tuple<int, int> position;
         public Tuple<int, int> prevPosition;
@@ -31,41 +32,41 @@ namespace ConsoleGame
         {
             
         } 
-        
     }
-    internal class Pong
+    public static class Pong
     {
-        public Player player1 = new Player();
-        Paddle p1Paddle = new Paddle();        
-        public Player player2 = new Player();
-        Paddle p2Paddle = new Paddle();
-        public bool waitingOnPlayerConnect = true;
-        int[,] layout;
-        public char paddleChar = '|';
-        public char ballChar = 'O';
-        char horizontalBorder = '-';
-        char verticalBorderLeft = '(';
-        char verticalBorderRight = ')';
-        public int center;
-        int xOffset = 2;
-        int yOffset = 3;
-        public bool placing = false;
-        public GameManager gameManager;
-        public Ball ball;
-        public void BuildBoard(int x, int y)
+        public static Player player1 = new Player();
+        static Paddle p1Paddle = new Paddle();
+        public static Player player2 = new Player();
+        static Paddle p2Paddle = new Paddle();
+        public static bool waitingOnPlayerConnect = true;
+        static int[,] layout;
+        public static char paddleChar = '|';
+        public static char leftPaddleChar = '}';
+        public static char rightPaddleChar = '{';
+        public static char ballChar = '•';
+        static char horizontalBorder = '-';
+        static char verticalBorderLeft = '(';
+        static char verticalBorderRight = ')';
+        public static int center;
+        static int xOffset = 2;
+        static int yOffset = 3;
+        public static bool placing = false;
+        public static Ball ball;
+        static Pong()
+        {
+            ball = new Ball(0, 0, 0, 0);
+        }
+        public static void BuildBoard(int x, int y)
         {
             placing = true;
             layout = new int[x, y];
             AnimateBoard();
-            PlacePlayers();
-            PlaceBall();
-            waitingOnPlayerConnect = true;
-            Menus.StartWaiting();
-            PlacementCountDown(5);
+            PlacePlayers();        
         }
-        public void PlaceBall()
+        public static void PlaceBall()
         {
-            int startX = (layout.GetLength(0) / 2)+xOffset;
+            int startX = (layout.GetLength(0) / 2)+xOffset-2;
             int startY = (layout.GetLength(1) / 2) + yOffset;
             int randVelX;
             int randVelY;
@@ -90,18 +91,23 @@ namespace ConsoleGame
                 ball.position = new Tuple<int, int>(startX, startY);
                 ball.velocity = new Tuple<int, int>(randVelX, randVelY);
             }
-            ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, ballChar);
+            ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, ballChar.ToString());
             ball.prevPosition = ball.position;
         }
 
-        public void PlacementCountDown(int timer)
+        public static void PlacementCountDown(int timer)
         {
-
             while (waitingOnPlayerConnect)
             {
-                
-                
+                Thread.Sleep(100);
             }
+            ConsoleWriter.Write(9, 13,"                                        ");
+            Menus.ReadyPrompt();
+            while (!GameManager.playersReady)
+            {
+                Thread.Sleep(100);
+            }
+            PlaceBall();
             if (ball != null)
             {
                 ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, " ");
@@ -109,43 +115,40 @@ namespace ConsoleGame
             placing = true;
             int x = (layout.GetLength(0) / 2) + xOffset-2;
             int y = (layout.GetLength(1) / 2) + yOffset;
-            ConsoleWriter.Write(x,y+1," ");
-            ConsoleWriter.Write(x,y-1," ");
+            ConsoleWriter.Write(x,y," ");
+            ConsoleWriter.Write(x,y-2," ");
             while (true)
             {
                 Thread.Sleep(1000);
                 timer -= 1;
-                ConsoleWriter.Write(x, y, timer.ToString());
+                ConsoleWriter.Write(x, y-1, timer.ToString());
                 if (timer == 0)
                 {
                     placing = false;
-                    ConsoleWriter.Write(x, y, "|");
-                    ConsoleWriter.Write(x, y + 1, "|");
-                    ConsoleWriter.Write(x, y - 1, "|");
+                    ConsoleWriter.Write(x, y-1," ");
                     break;
                 }
             }
-
         }
 
-        public void PlacePlayers()
+        public static void PlacePlayers()
         {
             player1.paddle = p1Paddle;
             player2.paddle = p2Paddle;
-            gameManager.players.Add(player1);
-            gameManager.players.Add(player2);
+            GameManager.players.Add(player1);
+            GameManager.players.Add(player2);
             player1.Id = 0;player2.Id = 1;
-            if (gameManager.currentRole == GameManager.Role.Client)
+            if (GameManager.currentRole == GameManager.Role.Client)
             {
-                gameManager.controller.player = player2;
+                InputController.player = player2;
             }
-            if (gameManager.currentRole == GameManager.Role.Server)
+            if (GameManager.currentRole == GameManager.Role.Server)
             {
-                gameManager.controller.player = player1;
+                InputController.player = player1;
             }
             player1.position= new Tuple<int, int>(3, (layout.GetLength(1) / 2)+yOffset);
-            player2.position = new Tuple<int, int>(layout.GetLength(0)-2, (layout.GetLength(1) / 2)+yOffset);
-            foreach (Player player in gameManager.players)
+            player2.position = new Tuple<int, int>(layout.GetLength(0)-1, (layout.GetLength(1) / 2)+yOffset);
+            foreach (Player player in GameManager.players)
             {
                 try
                 {
@@ -159,11 +162,10 @@ namespace ConsoleGame
                     Console.SetCursorPosition(1, 25);
                     Console.WriteLine(ex.ToString());
                 }               
-            }            
-            DrawPaddle(player1.position);
-            DrawPaddle(player2.position);      
+            }
+            DrawPlayers();    
         }
-        void DrawBoard(int x, int y)
+        static void DrawBoard(int x, int y)
         {
             for (int i = 0; i < layout.GetLength(0); i++)
             {
@@ -189,8 +191,9 @@ namespace ConsoleGame
             }
         }
 
-        void AnimateBoard()
+        static void AnimateBoard()
         {
+            Console.CursorVisible = false;
             int startx = 1;
             int starty = 1;
             ConsoleWriter.AniWrite(5, "============================================================", new Tuple<int, int>(startx, starty));
@@ -211,27 +214,22 @@ namespace ConsoleGame
                     Thread.Sleep(10);
                 }               
             }            
-            center = Menus.width / 2;
-            for (int i=1;i<Menus.height;i++)
-            {
-                ConsoleWriter.Write(center, starty + i, "|");
-            }
             ConsoleWriter.AniWrite(5, "===========================================================", new Tuple<int, int>(startx+1, 3));
             ConsoleWriter.AniWrite(5, "===========================================================", new Tuple<int, int>(startx + 1, 26));
             ConsoleWriter.AniWrite(5, "===========================================================", new Tuple<int, int>(startx+1, 28));
-            ConsoleWriter.AniWrite(5, "Say:", new Tuple<int, int>(startx + 2, 27));           
+            ConsoleWriter.AniWrite(5, "(C) To Chat", new Tuple<int, int>(startx + 2, 27));           
             DrawNames();
-            ConsoleWriter.Write(27,2,gameManager.player1Score.ToString());
-            ConsoleWriter.Write(33,2,gameManager.player2Score.ToString());
+            ConsoleWriter.Write(27,2,GameManager.player1Score.ToString());
+            ConsoleWriter.Write(33,2,GameManager.player2Score.ToString());
             Menus.DrawGameMenu();
             
         }
-        void DrawNames()
+        static void DrawNames()
         {
             ConsoleWriter.AniWrite(10, "Player 1", new Tuple<int, int>(3, 2));
             ConsoleWriter.AniWrite(10, "Player 2", new Tuple<int, int>(Menus.width-8, 2));
         }
-        public void UpdateBoard() 
+        public static void UpdateBoard() 
         {
             if (placing)
             {
@@ -239,33 +237,37 @@ namespace ConsoleGame
             }
             DrawBall();
         }
-        public void UpdateBall()
+        public static void UpdateBall()
         {
             if (placing)
-            { return; }
+            { 
+                return; 
+            }
             ball.prevPosition = ball.position;
             int newX = ball.position.Item1 + ball.velocity.Item1;
             int newY = ball.position.Item2 + ball.velocity.Item2;
             if (newX >63 )
             {
-                if (!gameManager.scored)
+                if (!GameManager.scored)
                 {
                     Score(1);
+                    ClientManager.SendDataAsync("sscored" + 1, ClientManager.stream);
                     return;
                 }
                 return;
             }
             if (newX < 1)
             {
-                if (!gameManager.scored)
+                if (!GameManager.scored)
                 {
                     Score(2);
+                    ClientManager.SendDataAsync("sscored" + 2, ClientManager.stream);
                     return;
                 }
                 return;
             }
             Tuple<int, int> coord = new Tuple<int, int>(newX, newY);
-            foreach (var player in gameManager.players)
+            foreach (var player in GameManager.players)
             {
                 if (Array.Exists(player.paddle.positions, pos => pos.Equals(coord)))
                 {
@@ -315,7 +317,7 @@ namespace ConsoleGame
             }
             if (newX <= 0+xOffset-1 || newX >= layout.GetLength(0) - 1+xOffset)
             {
-                if (newY < 7 || newY > 17)
+                if (newY < 6 || newY > 17)
                 {
                     ball.velocity = new Tuple<int, int>(-ball.velocity.Item1, ball.velocity.Item2);
                     newX = ball.position.Item1 + ball.velocity.Item1;
@@ -328,96 +330,101 @@ namespace ConsoleGame
             }            
             ball.position = new Tuple<int, int>(newX, newY);
         }
-        public void ReceiveBallPositon(int x, int y)
+        public static void ReceiveBallPositon(int x, int y)
         {
             Console.CursorVisible = false;
             ball.prevPosition = ball.position;
             ball.position = new Tuple<int, int>(x, y);
             DrawBall();
 ;        }
-        public void DrawBall()
+        public static void DrawBall()
         {
+            if (ball == null)
+            { 
+                return;
+            }
                 ConsoleWriter.Blank(ball.prevPosition.Item1, ball.prevPosition.Item2);
-                ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, ballChar);
-                if (ball.prevPosition.Item1 == center)
-                {
-                    ConsoleWriter.Write(ball.prevPosition.Item1, ball.prevPosition.Item2, "|");
-                }
+                ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, ballChar.ToString());
                 if (ball.prevPosition.Item2 == yOffset || ball.prevPosition.Item2 == layout.GetLength(1) + 1)
                 {
                 ConsoleWriter.Write(ball.prevPosition.Item1, ball.prevPosition.Item2, "=");
                 }
-            if (gameManager.controller.chatting)
+            if (InputController.chatting)
             {
-                //Console.SetCursorPosition(ConsoleWriter.chatStart.Item1 + gameManager.controller.mess - 1, ConsoleWriter.chatStart.Item2);
+                //Console.SetCursorPosition(ConsoleWriter.chatStart.Item1 + GameManager.InputController.mess - 1, ConsoleWriter.chatStart.Item2);
             }
         }
-        public void DrawPlayers()
+        public static void DrawPlayers()
         {
             Console.CursorVisible = false;
-            foreach (Player player in gameManager.players)
+            foreach (Player player in GameManager.players)
             {
                 DrawPlayerPaddle(player);               
             }
         }
-        void DrawPlayerPaddle(Player player)
+        static void DrawPlayerPaddle(Player player)
         {
             for (int i = 0; i < player.paddle.positions.Length; i++)
             {
-                ConsoleWriter.Write(player.paddle.positions[i].Item1, player.paddle.positions[i].Item2, paddleChar);
+                if (player.Id == 0)
+                {
+                    ConsoleWriter.Write(player.paddle.positions[i].Item1, player.paddle.positions[i].Item2, leftPaddleChar);
+                }
+                else if (player.Id == 1)
+                {
+                    ConsoleWriter.Write(player.paddle.positions[i].Item1, player.paddle.positions[i].Item2, rightPaddleChar);
+                }
             }
+            
+                
         }
-        void DrawPaddle(Tuple<int,int> position)
+        static void DrawPaddle(Tuple<int,int> position)
         {
             for (int i = -1;i<2;i++)
             {
                 ConsoleWriter.Write(position.Item1, position.Item2 + i, paddleChar);
             }
         }
-        public void ClearPaddle(Tuple<int,int> position)
+        public static void ClearPaddle(Tuple<int,int> position)
         {
             for (int i=-1;i<=1;i++)
             {
                 ConsoleWriter.Blank(position.Item1, position.Item2+i);
             }
         }
-        public void Score(int playerID)
+        public static void Score(int playerID)
         {
-            if (gameManager.gameOver || gameManager.scored)
+            if (GameManager.gameOver)
             {
                 return;
             }
+            GameManager.playersReady= false;
+            //ClientManager.SendDataAsync("sscored"+playerID, ClientManager.stream);
             ball.velocity = new Tuple<int, int>(0, 0);
             string player = "";           
-            gameManager.scored = true;            
+            GameManager.scored = true;            
             if (playerID == 1)
             {
                 player = "Player 1 ";
-                gameManager.player1Score += 1;
+                GameManager.player1Score += 1;
             }
             if (playerID == 2)
             {
                 player = "Player 2 ";
-                gameManager.player2Score += 1;
+                GameManager.player2Score += 1;
             }
-            gameManager.UpdateScore();
-            gameManager.controller.listening = false;
+            GameManager.UpdateScore();
+            InputController.listening = false;
             Menus.OpenMatchOver(player); 
         }       
-        public void Rematch()
+        public static void Rematch()
          {
-            center = Menus.width / 2;
+            ConsoleWriter.Write(ball.position.Item1, ball.position.Item2, " ");
+            ConsoleWriter.Write(ball.prevPosition.Item1, ball.prevPosition.Item2, " ");
             ConsoleWriter.AniWrite(0, "                   ", new Tuple<int, int>(22, 15));
             ConsoleWriter.AniWrite(0, "                                        ", new Tuple<int, int>(9, 16));
-            ConsoleWriter.Write(center,15,"|");
-            ConsoleWriter.Write(center,16,"|");
-            gameManager.scored = false;
-            gameManager.gameOver = false;
-            gameManager.controller.Listen();
-            gameManager.controller.chatting = false;
-            gameManager.controller.menuOpen = false;
-            PlacementCountDown(5);
-            PlaceBall();          
+            GameManager.Rematch();
+                   
         }
     }
     
