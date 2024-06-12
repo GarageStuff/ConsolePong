@@ -14,27 +14,31 @@ namespace ConsoleGame
         public static int height = 20;
         public static void MainMenu()
         {
+            Console.CursorVisible= false;
             Console.Clear();
             int consoleSizeX = width + 3;
             int consoleSizeY = height + 6;
-            ConsoleWriter.AniWrite(25, "Would you like to play a game? (N)ew game or (J)oin?", new Tuple<int, int>(5,5));
+            Console.SetCursorPosition(1, 1);
+            Console.Write(asciiart.mainMenu);
+            ConsoleWriter.AniWrite(30, "1. New game", new Tuple<int, int>(13,5));
+            ConsoleWriter.AniWrite(30, "2. Join Game", new Tuple<int, int>(13,7));
+            ConsoleWriter.AniWrite(30, "3. Quit", new Tuple<int, int>(13,9));
         PROMPT:
             ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
-            if (keyInfo.Key == ConsoleKey.N)
+            switch (keyInfo.Key)
             {
-                NewGame();
-                return;
-            }
-            else if (keyInfo.Key == ConsoleKey.J)
-            {
-                JoinMenu();
-                return;
-            }
-            else
-            {
-                ConsoleWriter.AniWrite(50, "Try again...", new Tuple<int, int>(1, 3));
-                Console.Write("");
-                goto PROMPT;
+                case ConsoleKey.D1:
+                    NewGame();
+                    break;
+                case ConsoleKey.D2:
+                    JoinMenu();
+                    break;
+                case ConsoleKey.D3:
+                    Console.Clear();
+                    Environment.Exit(0);
+                    break;
+                default:
+                    goto PROMPT;
             }
         }
 

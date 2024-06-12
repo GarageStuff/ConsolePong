@@ -56,11 +56,14 @@ namespace ConsoleGame
             }
             catch (SocketException e)
             {
-                Console.WriteLine($"SocketException: {e}");
+                Console.SetCursorPosition(12, 11);
+                Console.WriteLine("Could Not Start Server! Press Any Key To return to menu.");
+                Console.ReadKey();
+                Menus.MainMenu();
             }
             finally
             {
-                Console.WriteLine("TCP listener stopped");
+                //Console.WriteLine("TCP listener stopped");
                 server?.Stop();
             }
         }
@@ -118,7 +121,7 @@ namespace ConsoleGame
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception: {ex.Message}");
+                //Console.WriteLine($"Exception: {ex.Message}");
             }
             finally
             {

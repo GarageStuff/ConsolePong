@@ -98,21 +98,30 @@ namespace ConsoleGame
                                 break;
                             }                            
                         default:
-                            ConsoleWriter.Write(5, 10,"Bad Data: " + data.ToString());
                             break;
                     }
                 }
-                Console.SetCursorPosition(5, 10);
-                Console.WriteLine("Receive data async ended");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception: {ex.Message}" + " caller: " + ex.Source.ToString());
+                Console.SetCursorPosition(16, 10);
+                Console.WriteLine("Lost Connection");
             }
             finally
             {
-                client.Close();
+                if (stream != null)
+                {
+                    stream.Close();
+                }
+                if (client != null)
+                {
+                    
+                    client.Close();
+                }
+                Console.SetCursorPosition(12, 11);
                 Console.WriteLine("Disconnected from the server.");
+
+                Menus.MainMenu();
             }
         }
 
@@ -155,20 +164,23 @@ namespace ConsoleGame
                     if (playerStream!=null)
                     {
                         await playerStream.WriteAsync(data, 0, data.Length);
-                        //await stream.WriteAsync(data, 0, data.Length);
-                    }
-                    if (GameManager.currentRole == GameManager.Role.Server)
-                    {
-                        //if (client.Connected || GameServer.playerStreams.Count > 0)
-                        //{
-                            //playerStream = GameServer.playerStreams[0];
-                            //await playerStream.WriteAsync(data, 0, data.Length);
-                        //}                        
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex);
+                    if (stream != null)
+                    {
+                        stream.Close();
+                    }
+                    if (client != null)
+                    {
+
+                        client.Close();
+                    }
+                    Console.SetCursorPosition(12, 11);
+                    Console.WriteLine("Disconnected from the server.");
+
+                    Menus.MainMenu();
                 }
             }                     
         }
@@ -205,11 +217,9 @@ namespace ConsoleGame
         public static async void SendChat(string message)
         {
             if (client.Connected || GameServer.playerStreams.Count > 0)
-            {
-                
+            {                
                 await SendDataAsync(message, null);
-            }
-            
+            }            
         }
         public static async void ReceiveChat(string response)
         {

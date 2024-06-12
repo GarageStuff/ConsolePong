@@ -58,13 +58,12 @@ namespace ConsoleGame
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.ToString());
+                        //Console.WriteLine(ex.ToString());
                         break;
                     }
                     finally
                     {
-                        Console.WriteLine("Application finished. Press Enter to exit...");
-                        Console.ReadLine();
+                        QuitToMenu();
                     }
 
                 case Role.Server:
@@ -76,13 +75,12 @@ namespace ConsoleGame
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.ToString());
+                        
                         break;
                     }
                     finally
                     {
-                        Console.WriteLine("Application finished. Press Enter to exit...");
-                        Console.ReadLine();
+                        QuitToMenu();
                     }
             }
         }
@@ -107,15 +105,26 @@ namespace ConsoleGame
             }
             catch(Exception ex) 
             {
-                ConsoleWriter.Write(20, 20, ex.ToString());
-                Console.ReadLine() ;
+                //ConsoleWriter.Write(20, 20, ex.ToString());
+                //Console.ReadLine() ;
             }
             finally
             {
                 ClientManager.Disconnect();
-                Console.WriteLine("Client Ended");
-                //Reset();
-                //Console.ReadLine();
+                Console.WriteLine("Connection Lost! Quitting to Menu...");
+                int timer = 5;
+                while (true)
+                {
+                    Thread.Sleep(1000);
+                    timer -= 1;
+                    Console.SetCursorPosition(10, 14);
+                    Console.Write(timer.ToString());
+                    if (timer == 0)
+                    {
+                        QuitToMenu();
+                        break;
+                    }
+                }
             }
 
         }
@@ -132,7 +141,6 @@ namespace ConsoleGame
         {
             
         }
-        /////GAMEPLAY STUFF
         public static void StartGame()
         {    
             Pong.BuildBoard(60, 20);
