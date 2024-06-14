@@ -12,6 +12,7 @@ namespace ConsoleGame
         public static bool menuOpen = false;
         public static bool listening = false;
         public static bool chatting = false;
+        public static bool breakInput = false;
         public static Player player;
         public static List<string> chats= new List<string>();
 
@@ -25,6 +26,10 @@ namespace ConsoleGame
             while (true)
             {
                 //Thread.Sleep(10);
+                if (breakInput)
+                {
+                    break;
+                }
                 if (GameManager.scored)
                 {
                     while (true)

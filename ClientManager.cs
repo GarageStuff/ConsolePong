@@ -244,7 +244,6 @@ namespace ConsoleGame
                 case "nConfirmConnect":
                     GameManager.waitingForPlayerConnect = false;
                     break;
-
             }
         }
 

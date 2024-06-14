@@ -74,8 +74,7 @@ namespace ConsoleGame
                         break;
                     }
                     catch (Exception ex)
-                    {
-                        
+                    {                      
                         break;
                     }
                     finally
@@ -88,7 +87,7 @@ namespace ConsoleGame
         {
             Task.Run(() =>
             {                
-                GameServer.Start(100);
+                GameServer.Start(30);
             });
 
         }
@@ -162,6 +161,7 @@ namespace ConsoleGame
             InputController.listening= false;
             playersReady = false;
             readyPlayers = 0;
+            InputController.breakInput = true;
             Menus.MainMenu();
         }
         public static void Reset()

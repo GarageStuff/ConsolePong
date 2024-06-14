@@ -26,7 +26,7 @@ namespace ConsoleGame
             for (int i = 0; i < text.Length; i++)
             {
                 await Task.Delay(speed);
-                ConsoleWriter.Write(position.Item1 + i, position.Item2, text[i]);
+                Write(position.Item1 + i, position.Item2, text[i]);
             }
         }
         public static void AniWriteReverse(int speed, string text, Tuple<int, int> position)
